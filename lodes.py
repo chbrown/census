@@ -57,29 +57,30 @@ states = [
     ('wy', 'Wyoming')]
 
 
-def check(url, dirpath, gzip_test=False, verbose=True):
+def test_gzip(filepath):
+    # returns True if and only if 1) there is a file at filepath and
+    # 2) `gzip -t :filepath` has an exit code of 0
+    return os.path.exists(filepath) and subprocess.call(['gzip', '-t', filepath]) == 0
+
+
+def download(url, dirpath, verbose=True):
     filepath = os.path.join(dirpath, os.path.basename(url))
+    # if test_gzip(filepath):
+    # print 'Deleting corrupt gzip:', filepath
+    # os.remove(filepath)
     if os.path.exists(filepath):
         print 'Local file already exists:', filepath
-        if gzip_test:
-            print 'Testing gzip:', filepath
-            gzip_t = subprocess.call(['gzip', '-t', filepath])
-            if gzip_t != 0:
-                print 'Deleting corrupt gzip:', filepath
-                os.remove(filepath)
-                download(url, filepath, verbose)
+        return filepath
     else:
-        download(url, filepath, verbose)
-
-    return filepath
-
-
-def download(url, filepath, verbose):
-    filename, headers = urllib.urlretrieve(url, filepath)
-    if verbose:
-        print 'Downloaded: ' + url
-        print '>', filename
-        print '!', headers
+        tmpfile, headers = urllib.urlretrieve(url)
+        if verbose:
+            print 'Downloaded: ' + url
+            print '>', tmpfile
+            print '!', headers
+        os.rename(tmpfile, filepath)
+        if verbose:
+            print 'mv %s %s' % (tmpfile, filepath)
+        return filepath
 
 
 def loop(dirpath, versions):
@@ -93,9 +94,9 @@ def loop(dirpath, versions):
             args = dict(Version=version, State=state)
             print 'Starting {StateName} with {Version}'.format(StateName=state_name, Version=version)
 
-            check((root + '/version.txt').format(**args), dirpath)
-            check((root + '/{State}_xwalk.csv.gz').format(**args), dirpath, gzip_test=True)
-            md5sum_filename = check((root + '/lodes_{State}.md5sum').format(**args), dirpath)
+            download((root + '/version.txt').format(**args), dirpath)
+            download((root + '/{State}_xwalk.csv.gz').format(**args), dirpath)
+            md5sum_filename = download((root + '/lodes_{State}.md5sum').format(**args), dirpath)
 
             with open(md5sum_filename) as md5sum_fp:
                 for line in md5sum_fp:
@@ -103,7 +104,7 @@ def loop(dirpath, versions):
                     if 'xwalk' not in filename:
                         _, Type, _ = filename.split('_', 2)
                         url = (root + '/{Type}/{filename}.gz').format(Type=Type, filename=filename, **args)
-                        check(url, dirpath, gzip_test=True)
+                        download(url, dirpath)
 
 
 def main(dirpath, versions, nattempts=100):
