@@ -1,4 +1,5 @@
 import os
+import shutil
 import urllib
 import subprocess
 
@@ -77,7 +78,8 @@ def download(url, dirpath, verbose=True):
             print 'Downloaded: ' + url
             print '>', tmpfile
             print '!', headers
-        os.rename(tmpfile, filepath)
+        # can't use os.rename, because "[Errno 18] Invalid cross-device link"
+        shutil.move(tmpfile, filepath)
         if verbose:
             print 'mv %s %s' % (tmpfile, filepath)
         return filepath
