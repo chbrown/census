@@ -5,10 +5,12 @@ import subprocess
 
 states = [line.strip().split(',') for line in open('states.csv')]
 
+
 def test_gzip(filepath):
     # returns True if and only if 1) there is a file at filepath and
     # 2) `gzip -t :filepath` has an exit code of 0
-    return os.path.exists(filepath) and subprocess.call(['gzip', '-t', filepath]) == 0
+    # os.path.exists(filepath) is unnecessary, `gzip -t xyz` will return with 1 if xys doesn't exist.
+    return subprocess.call(['gzip', '-t', filepath]) == 0
 
 
 def download(url, dirpath, verbose=True):
